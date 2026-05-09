@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
 import qs.components.containers
@@ -44,7 +43,7 @@ Item {
         return Math.min(((QsWindow.window as QsWindow)?.screen?.height ?? 0) - Config.border.thickness * 2, height + padding * 2);
     }
 
-    ClippingWrapperRectangle {
+    StyledClippingWrapperRectangle {
         anchors.fill: parent
         anchors.margins: root.padding
 
@@ -181,7 +180,7 @@ Item {
             }
         }
 
-        ClippingRectangle {
+        StyledClippingRect {
             anchors.top: parent.top
             anchors.topMargin: wrapper.idx === 0 ? 0 : Tokens.spacing.smaller
 

@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
 import qs.components.filedialog
@@ -74,7 +73,7 @@ Item {
         tabs: root.dashboardTabs
     }
 
-    ClippingRectangle {
+    StyledClippingRect {
         id: viewWrapper
 
         anchors.top: tabs.bottom

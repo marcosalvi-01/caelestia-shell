@@ -174,7 +174,7 @@ Item {
                 }
             }
 
-            ClippingRectangle {
+            StyledClippingRect {
                 id: stateWrapper
 
                 anchors.left: parent.left

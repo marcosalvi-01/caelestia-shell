@@ -121,7 +121,7 @@ Item {
         id: entriesModel
     }
 
-    ClippingRectangle {
+    StyledClippingRect {
         id: taskbarClippingRect
 
         anchors.fill: parent
