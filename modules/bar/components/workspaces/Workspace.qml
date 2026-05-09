@@ -23,6 +23,22 @@ ColumnLayout {
     readonly property int ws: groupOffset + index + 1
     readonly property bool isOccupied: occupied[ws] ?? false
     readonly property bool hasWindows: isOccupied && Config.bar.workspaces.showWindows
+    readonly property string displayName: {
+        const ws = Hypr.workspaces.values.find(w => w.id === root.ws);
+        const wsName = !ws || ws.name == root.ws ? root.ws : ws.name[0];
+        let name = wsName.toString();
+        if (Config.bar.workspaces.capitalisation.toLowerCase() === "upper") {
+            name = name.toUpperCase();
+        } else if (Config.bar.workspaces.capitalisation.toLowerCase() === "lower") {
+            name = name.toLowerCase();
+        }
+        return name;
+    }
+    readonly property string defaultLabel: Config.bar.workspaces.label || displayName
+    readonly property string occupiedLabel: Config.bar.workspaces.occupiedLabel === "" ? "" : (Config.bar.workspaces.occupiedLabel || defaultLabel)
+    readonly property string activeLabel: Config.bar.workspaces.activeLabel || (root.isOccupied ? occupiedLabel : defaultLabel)
+    readonly property string indicatorText: root.activeWsId === root.ws ? activeLabel : root.isOccupied ? occupiedLabel : defaultLabel
+    readonly property bool hasIndicator: indicatorText.length > 0
 
     Layout.alignment: Qt.AlignHCenter
     Layout.preferredHeight: size
@@ -33,25 +49,18 @@ ColumnLayout {
         id: indicator
 
         Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
-        Layout.preferredHeight: Tokens.sizes.bar.innerWidth - Tokens.padding.small * 2
+        Layout.preferredHeight: root.hasIndicator ? Tokens.sizes.bar.innerWidth - Tokens.padding.small * 2 : 0
+
+        visible: root.hasIndicator
 
         animate: true
-        text: {
-            const ws = Hypr.workspaces.values.find(w => w.id === root.ws);
-            const wsName = !ws || ws.name == root.ws ? root.ws : ws.name[0];
-            let displayName = wsName.toString();
-            if (Config.bar.workspaces.capitalisation.toLowerCase() === "upper") {
-                displayName = displayName.toUpperCase();
-            } else if (Config.bar.workspaces.capitalisation.toLowerCase() === "lower") {
-                displayName = displayName.toLowerCase();
-            }
-            const label = Config.bar.workspaces.label || displayName;
-            const occupiedLabel = Config.bar.workspaces.occupiedLabel || label;
-            const activeLabel = Config.bar.workspaces.activeLabel || (root.isOccupied ? occupiedLabel : label);
-            return root.activeWsId === root.ws ? activeLabel : root.isOccupied ? occupiedLabel : label;
-        }
+        text: root.indicatorText
         color: Config.bar.workspaces.occupiedBg || root.isOccupied || root.activeWsId === root.ws ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2)
         verticalAlignment: Qt.AlignVCenter
+    }
+
+    Item {
+        Layout.preferredHeight: !root.hasIndicator && root.hasWindows ? Tokens.padding.small : 0
     }
 
     Loader {
@@ -61,7 +70,7 @@ ColumnLayout {
 
         Layout.alignment: Qt.AlignHCenter
         Layout.fillHeight: true
-        Layout.topMargin: -Tokens.sizes.bar.innerWidth / 10
+        Layout.topMargin: root.hasIndicator ? -Tokens.sizes.bar.innerWidth / 10 : 0
 
         visible: active
         active: root.hasWindows

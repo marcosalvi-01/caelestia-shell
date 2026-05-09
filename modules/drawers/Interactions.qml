@@ -21,7 +21,30 @@ CustomMouseArea {
     property point dragStart
     property bool dashboardShortcutActive
     property bool osdShortcutActive
+    property bool sidebarShortcutActive
     property bool utilitiesShortcutActive
+
+    function panelWidth(panel: Item): real {
+        return panel.width || panel.implicitWidth || 0;
+    }
+
+    function inSidebarHoverArea(x: real, y: real): bool {
+        if (!Config.sidebar.enabled)
+            return false;
+
+        const rightWidth = Math.max(panelWidth(panels.notifications), panelWidth(panels.sidebar), panelWidth(panels.utilities));
+        if (x <= width - rightWidth)
+            return false;
+
+        const cornerHeight = Math.max(Config.border.rounding * 3, Math.floor(rightWidth / 4));
+        if (y < borderThickness + cornerHeight)
+            return true;
+
+        if (inRightPanel(panels.notifications, x, y))
+            return true;
+
+        return visibilities.sidebar;
+    }
 
     function withinPanelHeight(panel: Item, x: real, y: real): bool {
         const panelY = root.borderThickness + panel.y;
@@ -74,6 +97,9 @@ CustomMouseArea {
 
             if (!dashboardShortcutActive)
                 visibilities.dashboard = false;
+
+            if (!sidebarShortcutActive)
+                visibilities.sidebar = false;
 
             if (!utilitiesShortcutActive)
                 visibilities.utilities = false;
@@ -138,10 +164,13 @@ CustomMouseArea {
                     visibilities.session = false;
 
                 // Show sidebar on drag if in session area and session is nearly fully visible
-                if (showSidebar && panels.session.offsetScale <= 0 && dragX < -Config.sidebar.dragThreshold)
+                if (showSidebar && panels.session.offsetScale <= 0 && dragX < -Config.sidebar.dragThreshold) {
+                    sidebarShortcutActive = true;
                     visibilities.sidebar = true;
+                }
             } else if (showSidebar && dragX < -Config.sidebar.dragThreshold) {
                 // Show sidebar on drag if not in session area
+                sidebarShortcutActive = true;
                 visibilities.sidebar = true;
             }
         } else {
@@ -166,10 +195,17 @@ CustomMouseArea {
                 else if (dragX > Config.session.dragThreshold)
                     visibilities.session = false;
             }
-
+            
             // Hide sidebar on drag
-            if (pressed && inRightPanel(panels.sidebar, dragStart.x, 0) && dragX > Config.sidebar.dragThreshold)
+            if (pressed && inRightPanel(panels.sidebar, dragStart.x, 0) && dragX > Config.sidebar.dragThreshold) {
                 visibilities.sidebar = false;
+                sidebarShortcutActive = false;
+            }
+        }
+
+        const showSidebarHover = inSidebarHoverArea(x, y);
+        if (!sidebarShortcutActive) {
+            visibilities.sidebar = showSidebarHover;
         }
 
         // Show launcher on hover, or show/hide on drag if hover is disabled
@@ -281,6 +317,18 @@ CustomMouseArea {
             } else {
                 // Utilities hidden, clear shortcut flag
                 root.utilitiesShortcutActive = false;
+            }
+        }
+
+        function onSidebarChanged() {
+            if (root.visibilities.sidebar) {
+                // Sidebar became visible, immediately check if this should be shortcut mode
+                const inSidebarArea = root.inSidebarHoverArea(root.mouseX, root.mouseY);
+                if (!inSidebarArea)
+                    root.sidebarShortcutActive = true;
+            } else {
+                // Sidebar hidden, clear shortcut flag
+                root.sidebarShortcutActive = false;
             }
         }
 
