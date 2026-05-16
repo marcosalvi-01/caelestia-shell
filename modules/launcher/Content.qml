@@ -70,6 +70,10 @@ Item {
         StyledTextField {
             id: search
 
+            function isCalculatorQuery(text: string): bool {
+                return text.startsWith("=") || text.startsWith(`${GlobalConfig.launcher.actionPrefix}calc `);
+            }
+
             anchors.left: searchIcon.right
             anchors.right: clearIcon.left
             anchors.leftMargin: Tokens.spacing.small
@@ -88,11 +92,10 @@ Item {
                             Wallpapers.previewColourLock = true;
                         Wallpapers.setWallpaper(currentItem.modelData.path);
                         root.visibilities.launcher = false;
+                    } else if (search.isCalculatorQuery(text)) {
+                        currentItem.onClicked();
                     } else if (text.startsWith(GlobalConfig.launcher.actionPrefix)) {
-                        if (text.startsWith(`${GlobalConfig.launcher.actionPrefix}calc `))
-                            currentItem.onClicked();
-                        else
-                            currentItem.modelData.onClicked(list.currentList);
+                        currentItem.modelData.onClicked(list.currentList);
                     } else {
                         Apps.launch(currentItem.modelData);
                         root.visibilities.launcher = false;

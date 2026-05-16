@@ -6,6 +6,7 @@
 #include <qdir.h>
 #include <qfileinfo.h>
 #include <qfuturewatcher.h>
+#include <qicon.h>
 #include <qloggingcategory.h>
 #include <qqmlengine.h>
 
@@ -136,6 +137,23 @@ QString CUtils::toLocalFile(const QUrl& url) const {
     }
 
     return url.toLocalFile();
+}
+
+bool CUtils::fileExists(const QUrl& url) const {
+    if (!url.isLocalFile()) {
+        qCWarning(lcCUtils) << "fileExists: given url is not a local file" << url;
+        return false;
+    }
+
+    return QFileInfo::exists(url.toLocalFile());
+}
+
+bool CUtils::hasThemeIcon(const QString& name) const {
+    if (name.isEmpty()) {
+        return false;
+    }
+
+    return QIcon::hasThemeIcon(name);
 }
 
 } // namespace caelestia

@@ -3,9 +3,11 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Services.Pipewire
 import Caelestia.Config
 import qs.components
+import qs.components.containers
 import qs.components.controls
 import qs.services
 
@@ -14,8 +16,12 @@ Item {
 
     required property PopoutState popouts
 
-    implicitWidth: layout.implicitWidth + Tokens.padding.normal * 2
-    implicitHeight: layout.implicitHeight + Tokens.padding.normal * 2
+    readonly property int contentWidth: 360
+    readonly property int screenHeight: (QsWindow.window as QsWindow)?.screen?.height ?? 0
+    readonly property int maxContentHeight: screenHeight > 0 ? Math.floor(screenHeight * 0.7) : 520
+
+    implicitWidth: contentWidth + Tokens.padding.normal * 2
+    implicitHeight: flickable.height + Tokens.padding.normal * 2
 
     ButtonGroup {
         id: sinks
@@ -25,94 +31,114 @@ Item {
         id: sources
     }
 
-    ColumnLayout {
-        id: layout
+    StyledFlickable {
+        id: flickable
 
         anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: Tokens.spacing.normal
+        anchors.top: parent.top
+        width: root.contentWidth
+        height: Math.min(contentLayout.implicitHeight, root.maxContentHeight)
+        clip: true
+        contentWidth: width
+        contentHeight: contentLayout.implicitHeight
+        flickableDirection: Flickable.VerticalFlick
 
-        StyledText {
-            text: qsTr("Output device")
-            font.weight: 500
+        StyledScrollBar.vertical: StyledScrollBar {
+            flickable: flickable
         }
 
-        Repeater {
-            model: Audio.sinks
+        ColumnLayout {
+            id: contentLayout
 
-            StyledRadioButton {
-                id: control
+            width: flickable.width - Tokens.padding.small
+            spacing: Tokens.spacing.normal
 
-                required property PwNode modelData
-
-                ButtonGroup.group: sinks
-                checked: Audio.sink?.id === modelData.id
-                onClicked: Audio.setAudioSink(modelData)
-                text: modelData.description
-            }
-        }
-
-        StyledText {
-            Layout.topMargin: Tokens.spacing.smaller
-            text: qsTr("Input device")
-            font.weight: 500
-        }
-
-        Repeater {
-            model: Audio.sources
-
-            StyledRadioButton {
-                required property PwNode modelData
-
-                ButtonGroup.group: sources
-                checked: Audio.source?.id === modelData.id
-                onClicked: Audio.setAudioSource(modelData)
-                text: modelData.description
-            }
-        }
-
-        StyledText {
-            Layout.topMargin: Tokens.spacing.smaller
-            Layout.bottomMargin: -Tokens.spacing.small / 2
-            text: qsTr("Volume (%1)").arg(Audio.muted ? qsTr("Muted") : `${Math.round(Audio.volume * 100)}%`)
-            font.weight: 500
-        }
-
-        CustomMouseArea {
-            Layout.fillWidth: true
-            implicitHeight: Tokens.padding.normal * 3
-
-            onWheel: event => {
-                if (event.angleDelta.y > 0)
-                    Audio.incrementVolume();
-                else if (event.angleDelta.y < 0)
-                    Audio.decrementVolume();
+            StyledText {
+                text: qsTr("Output device")
+                font.weight: 500
             }
 
-            StyledSlider {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                implicitHeight: parent.implicitHeight
+            Repeater {
+                model: Audio.sinks
 
-                value: Audio.volume
-                onMoved: Audio.setVolume(value)
+                StyledRadioButton {
+                    id: control
 
-                Behavior on value {
-                    Anim {}
+                    required property PwNode modelData
+
+                    ButtonGroup.group: sinks
+                    checked: Audio.sink?.id === modelData.id
+                    onClicked: Audio.setAudioSink(modelData)
+                    text: modelData.description
                 }
             }
-        }
 
-        IconTextButton {
-            Layout.fillWidth: true
-            Layout.topMargin: Tokens.spacing.normal
-            inactiveColour: Colours.palette.m3primaryContainer
-            inactiveOnColour: Colours.palette.m3onPrimaryContainer
-            verticalPadding: Tokens.padding.small
-            text: qsTr("Open settings")
-            icon: "settings"
+            StyledText {
+                Layout.topMargin: Tokens.spacing.smaller
+                text: qsTr("Input device")
+                font.weight: 500
+            }
 
-            onClicked: root.popouts.detachRequested("audio")
+            Repeater {
+                model: Audio.sources
+
+                StyledRadioButton {
+                    required property PwNode modelData
+
+                    ButtonGroup.group: sources
+                    checked: Audio.source?.id === modelData.id
+                    onClicked: Audio.setAudioSource(modelData)
+                    text: modelData.description
+                }
+            }
+
+            StyledText {
+                Layout.topMargin: Tokens.spacing.smaller
+                Layout.bottomMargin: -Tokens.spacing.small / 2
+                text: qsTr("Volume (%1)").arg(Audio.muted ? qsTr("Muted") : `${Math.round(Audio.volume * 100)}%`)
+                font.weight: 500
+            }
+
+            CustomMouseArea {
+                Layout.fillWidth: true
+                implicitHeight: Tokens.padding.normal * 3
+
+                onWheel: event => {
+                    if (event.angleDelta.y > 0)
+                        Audio.incrementVolume();
+                    else if (event.angleDelta.y < 0)
+                        Audio.decrementVolume();
+                }
+
+                StyledSlider {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    implicitHeight: parent.implicitHeight
+
+                    value: Audio.volume
+                    onMoved: Audio.setVolume(value)
+
+                    Behavior on value {
+                        Anim {}
+                    }
+                }
+            }
+
+            AudioStreamsMixer {
+                Layout.fillWidth: true
+            }
+
+            IconTextButton {
+                Layout.fillWidth: true
+                Layout.topMargin: Tokens.spacing.normal
+                inactiveColour: Colours.palette.m3primaryContainer
+                inactiveOnColour: Colours.palette.m3onPrimaryContainer
+                verticalPadding: Tokens.padding.small
+                text: qsTr("Open settings")
+                icon: "settings"
+
+                onClicked: root.popouts.detachRequested("audio")
+            }
         }
     }
 }

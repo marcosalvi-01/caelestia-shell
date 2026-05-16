@@ -18,6 +18,7 @@ class AppEntry : public QObject {
     Q_PROPERTY(QObject* entry READ entry CONSTANT)
 
     Q_PROPERTY(quint32 frequency READ frequency NOTIFY frequencyChanged)
+    Q_PROPERTY(quint64 lastLaunched READ lastLaunched NOTIFY lastLaunchedChanged)
     Q_PROPERTY(QString id READ id CONSTANT)
     Q_PROPERTY(QString name READ name NOTIFY nameChanged)
     Q_PROPERTY(QString comment READ comment NOTIFY commentChanged)
@@ -36,6 +37,9 @@ public:
     void setFrequency(quint32 frequency);
     void incrementFrequency();
 
+    [[nodiscard]] quint64 lastLaunched() const;
+    void setLastLaunched(quint64 lastLaunched);
+
     [[nodiscard]] QString id() const;
     [[nodiscard]] QString name() const;
     [[nodiscard]] QString comment() const;
@@ -47,6 +51,7 @@ public:
 
 signals:
     void frequencyChanged();
+    void lastLaunchedChanged();
     void nameChanged();
     void commentChanged();
     void execStringChanged();
@@ -58,6 +63,7 @@ signals:
 private:
     QObject* m_entry;
     quint32 m_frequency;
+    quint64 m_lastLaunched = 0;
 };
 
 class AppDb : public QObject {
@@ -109,6 +115,7 @@ private:
     QList<AppEntry*>& getSortedApps() const;
     bool isFavourite(const AppEntry* app) const;
     quint32 getFrequency(const QString& id) const;
+    quint64 getLastLaunched(const QString& id) const;
     void updateAppFrequencies();
     void updateApps();
 };

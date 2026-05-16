@@ -341,13 +341,36 @@ Item {
 
                                 spacing: Tokens.spacing.normal
 
-                                IconImage {
-                                    asynchronous: true
+                                Loader {
+                                    id: appListIcon
+
+                                    readonly property var iconData: Icons.resolveDesktopEntryIcon(modelData.entry)
+
                                     Layout.alignment: Qt.AlignVCenter
-                                    implicitSize: 32
-                                    source: {
-                                        const entry = modelData.entry;
-                                        return entry ? Quickshell.iconPath(entry.icon, "image-missing") : "image-missing";
+                                    implicitWidth: 32
+                                    implicitHeight: 32
+
+                                    sourceComponent: iconData.materialIcon ? materialIcon : appIcon
+
+                                    Component {
+                                        id: appIcon
+
+                                        IconImage {
+                                            anchors.fill: parent
+                                            asynchronous: true
+                                            source: appListIcon.iconData.source
+                                        }
+                                    }
+
+                                    Component {
+                                        id: materialIcon
+
+                                        MaterialIcon {
+                                            anchors.centerIn: parent
+                                            text: appListIcon.iconData.materialIcon
+                                            font.pointSize: Tokens.font.size.large
+                                            color: Colours.palette.m3onSurfaceVariant
+                                        }
                                     }
                                 }
 
@@ -541,21 +564,38 @@ Item {
                     anchors.centerIn: parent
                     spacing: Tokens.spacing.normal
 
-                    IconImage {
+                    Loader {
                         id: appIconImage
 
-                        asynchronous: true
                         Layout.alignment: Qt.AlignHCenter
-                        implicitSize: Tokens.font.size.extraLarge * 3 * 2
-                        source: {
+                        implicitWidth: Tokens.font.size.extraLarge * 3 * 2
+                        implicitHeight: implicitWidth
+                        readonly property var iconData: {
                             const app = appDetailsLayout.displayedApp;
-                            if (!app)
-                                return "image-missing";
-                            const entry = app.entry;
-                            if (entry && entry.icon) {
-                                return Quickshell.iconPath(entry.icon, "image-missing");
+                            return Icons.resolveDesktopEntryIcon(app?.entry);
+                        }
+
+                        sourceComponent: iconData.materialIcon ? materialIcon : appIcon
+
+                        Component {
+                            id: appIcon
+
+                            IconImage {
+                                anchors.fill: parent
+                                asynchronous: true
+                                source: appIconImage.iconData.source
                             }
-                            return "image-missing";
+                        }
+
+                        Component {
+                            id: materialIcon
+
+                            MaterialIcon {
+                                anchors.centerIn: parent
+                                text: appIconImage.iconData.materialIcon
+                                font.pointSize: Tokens.font.size.extraLarge * 3
+                                color: Colours.palette.m3onSurfaceVariant
+                            }
                         }
                     }
 

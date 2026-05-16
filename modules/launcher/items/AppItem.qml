@@ -12,6 +12,7 @@ Item {
 
     required property DesktopEntry modelData
     required property DrawerVisibilities visibilities
+    readonly property var iconData: Icons.resolveDesktopEntryIcon(root.modelData)
 
     implicitHeight: Tokens.sizes.launcher.itemHeight
 
@@ -32,14 +33,39 @@ Item {
         anchors.rightMargin: Tokens.padding.larger
         anchors.margins: Tokens.padding.smaller
 
-        IconImage {
+        Item {
             id: icon
 
-            asynchronous: true
-            source: Quickshell.iconPath(root.modelData?.icon, "image-missing")
-            implicitSize: parent.height * 0.8
+            implicitWidth: parent.height * 0.8
+            implicitHeight: implicitWidth
 
             anchors.verticalCenter: parent.verticalCenter
+
+            Loader {
+                anchors.fill: parent
+                sourceComponent: root.iconData.materialIcon ? materialIcon : appIcon
+            }
+
+            Component {
+                id: appIcon
+
+                IconImage {
+                    anchors.fill: parent
+                    asynchronous: true
+                    source: root.iconData.source
+                }
+            }
+
+            Component {
+                id: materialIcon
+
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    text: root.iconData.materialIcon
+                    font.pointSize: Tokens.font.size.extraLarge
+                    color: Colours.palette.m3onSurfaceVariant
+                }
+            }
         }
 
         Item {

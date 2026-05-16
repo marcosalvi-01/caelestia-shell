@@ -36,8 +36,8 @@ ColumnLayout {
     }
     readonly property string defaultLabel: Config.bar.workspaces.label || displayName
     readonly property string occupiedLabel: Config.bar.workspaces.occupiedLabel === "" ? "" : (Config.bar.workspaces.occupiedLabel || defaultLabel)
-    readonly property string activeLabel: Config.bar.workspaces.activeLabel || (root.isOccupied ? occupiedLabel : defaultLabel)
-    readonly property string indicatorText: root.activeWsId === root.ws ? activeLabel : root.isOccupied ? occupiedLabel : defaultLabel
+    readonly property string activeLabel: Config.bar.workspaces.activeLabel === "" ? "" : (Config.bar.workspaces.activeLabel || defaultLabel)
+    readonly property string indicatorText: root.isOccupied ? occupiedLabel : (root.activeWsId === root.ws ? activeLabel : defaultLabel)
     readonly property bool hasIndicator: indicatorText.length > 0
 
     Layout.alignment: Qt.AlignHCenter

@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Caelestia
 import Quickshell.Services.Notifications
 import Caelestia.Config
 
@@ -104,6 +105,48 @@ Singleton {
         if (fallback !== "undefined")
             return Quickshell.iconPath(icon, fallback);
         return Quickshell.iconPath(icon);
+    }
+
+    function resolveDesktopEntryIcon(entry: var): var {
+        const defaultIcon = {
+            source: "",
+            materialIcon: "apps"
+        };
+
+        if (!entry)
+            return defaultIcon;
+
+        const icon = entry.icon ?? "";
+        if (icon) {
+            if (icon.startsWith("/") || icon.startsWith("file://")) {
+                const resolvedPath = Qt.resolvedUrl(icon);
+                if (!CUtils.fileExists(resolvedPath))
+                    return defaultIcon;
+
+                return {
+                    source: resolvedPath,
+                    materialIcon: ""
+                };
+            }
+
+            if (CUtils.hasThemeIcon(icon)) {
+                return {
+                    source: Quickshell.iconPath(icon),
+                    materialIcon: ""
+                };
+            }
+        }
+
+        const categories = entry.categories ?? [];
+        for (const [key, value] of Object.entries(categoryIcons))
+            if (categories.includes(key)) {
+                return {
+                    source: "",
+                    materialIcon: value
+                };
+            }
+
+        return defaultIcon;
     }
 
     function getAppCategoryIcon(name: string, fallback: string): string {

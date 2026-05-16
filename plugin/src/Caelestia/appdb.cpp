@@ -1,5 +1,6 @@
 #include "appdb.hpp"
 
+#include <qdatetime.h>
 #include <qloggingcategory.h>
 #include <qsqldatabase.h>
 #include <qsqlquery.h>
@@ -8,6 +9,34 @@
 Q_LOGGING_CATEGORY(lcAppDb, "caelestia.appdb", QtInfoMsg)
 
 namespace caelestia {
+
+namespace {
+
+void ensureSchema(QSqlDatabase& db) {
+    QSqlQuery createQuery(db);
+    createQuery.exec("CREATE TABLE IF NOT EXISTS frequencies ("
+                     "id TEXT PRIMARY KEY, "
+                     "frequency INTEGER, "
+                     "last_launched INTEGER DEFAULT 0)");
+
+    bool hasLastLaunched = false;
+    QSqlQuery schemaQuery(db);
+    if (schemaQuery.exec("PRAGMA table_info(frequencies)")) {
+        while (schemaQuery.next()) {
+            if (schemaQuery.value(1).toString() == "last_launched") {
+                hasLastLaunched = true;
+                break;
+            }
+        }
+    }
+
+    if (!hasLastLaunched) {
+        QSqlQuery alterQuery(db);
+        alterQuery.exec("ALTER TABLE frequencies ADD COLUMN last_launched INTEGER DEFAULT 0");
+    }
+}
+
+} // namespace
 
 AppEntry::AppEntry(QObject* entry, unsigned int frequency, QObject* parent)
     : QObject(parent)
@@ -47,6 +76,17 @@ void AppEntry::setFrequency(unsigned int frequency) {
 void AppEntry::incrementFrequency() {
     m_frequency++;
     emit frequencyChanged();
+}
+
+quint64 AppEntry::lastLaunched() const {
+    return m_lastLaunched;
+}
+
+void AppEntry::setLastLaunched(quint64 lastLaunched) {
+    if (m_lastLaunched != lastLaunched) {
+        m_lastLaunched = lastLaunched;
+        emit lastLaunchedChanged();
+    }
 }
 
 QString AppEntry::id() const {
@@ -116,9 +156,7 @@ AppDb::AppDb(QObject* parent)
     auto db = QSqlDatabase::addDatabase("QSQLITE", m_uuid);
     db.setDatabaseName(":memory:");
     db.open();
-
-    QSqlQuery query(db);
-    query.exec("CREATE TABLE IF NOT EXISTS frequencies (id TEXT PRIMARY KEY, frequency INTEGER)");
+    ensureSchema(db);
 }
 
 QString AppDb::uuid() const {
@@ -143,9 +181,7 @@ void AppDb::setPath(const QString& path) {
     db.close();
     db.setDatabaseName(newPath);
     db.open();
-
-    QSqlQuery query(db);
-    query.exec("CREATE TABLE IF NOT EXISTS frequencies (id TEXT PRIMARY KEY, frequency INTEGER)");
+    ensureSchema(db);
 
     updateAppFrequencies();
 }
@@ -205,17 +241,20 @@ QQmlListProperty<AppEntry> AppDb::apps() {
 void AppDb::incrementFrequency(const QString& id) {
     auto db = QSqlDatabase::database(m_uuid);
     QSqlQuery query(db);
+    const auto now = static_cast<quint64>(QDateTime::currentSecsSinceEpoch());
 
-    query.prepare("INSERT INTO frequencies (id, frequency) "
-                  "VALUES (:id, 1) "
-                  "ON CONFLICT (id) DO UPDATE SET frequency = frequency + 1");
+    query.prepare("INSERT INTO frequencies (id, frequency, last_launched) "
+                  "VALUES (:id, 1, :lastLaunched) "
+                  "ON CONFLICT (id) DO UPDATE SET frequency = frequency + 1, last_launched = :lastLaunched");
     query.bindValue(":id", id);
+    query.bindValue(":lastLaunched", now);
     query.exec();
 
     auto* app = m_apps.value(id);
     if (app) {
         const auto before = getSortedApps();
         app->incrementFrequency();
+        app->setLastLaunched(now);
         getSortedApps();
         if (before != m_sortedApps) {
             emit appsChanged();
@@ -243,6 +282,8 @@ QList<AppEntry*>& AppDb::getSortedApps() const {
             return aIsFav;
         if (a->frequency() != b->frequency())
             return a->frequency() > b->frequency();
+        if (a->lastLaunched() != b->lastLaunched())
+            return a->lastLaunched() > b->lastLaunched();
         return a->name().localeAwareCompare(b->name()) < 0;
     });
     return m_sortedApps;
@@ -271,11 +312,26 @@ quint32 AppDb::getFrequency(const QString& id) const {
     return 0;
 }
 
+quint64 AppDb::getLastLaunched(const QString& id) const {
+    auto db = QSqlDatabase::database(m_uuid);
+    QSqlQuery query(db);
+
+    query.prepare("SELECT last_launched FROM frequencies WHERE id = :id");
+    query.bindValue(":id", id);
+
+    if (query.exec() && query.next()) {
+        return query.value(0).toULongLong();
+    }
+
+    return 0;
+}
+
 void AppDb::updateAppFrequencies() {
     const auto before = getSortedApps();
 
     for (auto* app : std::as_const(m_apps)) {
         app->setFrequency(getFrequency(app->id()));
+        app->setLastLaunched(getLastLaunched(app->id()));
     }
 
     getSortedApps();
@@ -292,6 +348,7 @@ void AppDb::updateApps() {
         if (!m_apps.contains(id)) {
             dirty = true;
             auto* const newEntry = new AppEntry(entry, getFrequency(id), this);
+            newEntry->setLastLaunched(getLastLaunched(id));
             QObject::connect(newEntry, &QObject::destroyed, this, [id, this]() {
                 if (m_apps.remove(id)) {
                     emit appsChanged();

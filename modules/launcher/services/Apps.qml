@@ -8,6 +8,22 @@ import qs.utils
 Searcher {
     id: root
 
+    function compareEntries(a: AppEntry, b: AppEntry): int {
+        if (a.frequency !== b.frequency)
+            return b.frequency - a.frequency;
+        if (a.lastLaunched !== b.lastLaunched)
+            return b.lastLaunched - a.lastLaunched;
+        return a.name.localeCompare(b.name);
+    }
+
+    function mapRankedResults(results: list<var>): list<var> {
+        return results.sort((a, b) => {
+            if (a.score !== b.score)
+                return b.score - a.score;
+            return compareEntries(a.item, b.item);
+        }).map(r => r.item.entry);
+    }
+
     function launch(entry: DesktopEntry): void {
         appDb.incrementFrequency(entry.id);
 
@@ -48,14 +64,14 @@ Searcher {
             keys = ["keywords", "name"];
             weights = [0.9, 0.1];
         } else {
-            keys = ["name"];
-            weights = [1];
+            keys = ["name", "genericName", "comment", "execString", "keywords", "id"];
+            weights = [0.4, 0.2, 0.15, 0.15, 0.07, 0.03];
 
             if (!search.startsWith(`${prefix}t `))
-                return query(search).map(e => e.entry);
+                return mapRankedResults(queryWithMetadata(search));
         }
 
-        const results = query(search.slice(prefix.length + 2)).map(e => e.entry);
+        const results = mapRankedResults(queryWithMetadata(search.slice(prefix.length + 2)));
         if (search.startsWith(`${prefix}t `))
             return results.filter(a => a.runInTerminal);
         return results;
