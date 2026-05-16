@@ -45,10 +45,10 @@ ColumnLayout {
         const id = ch.id;
         const top = ch.y;
 
-        if (id === "statusIcons" && Config.bar.popouts.statusIcons) {
-            const items = (ch.item as StatusIcons).items;
-            const icon = items.childAt(items.width / 2, mapToItem(items, 0, y).y);
-            if (icon) {
+            if (id === "statusIcons" && Config.bar.popouts.statusIcons) {
+                const items = (ch.item as StatusIcons).items;
+                const icon = items.childAt(items.width / 2, mapToItem(items, 0, y).y);
+                if (icon) {
                 popouts.currentName = icon.name;
                 popouts.currentCenter = Qt.binding(() => icon.mapToItem(root, 0, icon.implicitHeight / 2).y);
                 popouts.hasCurrent = true;
@@ -86,6 +86,11 @@ ColumnLayout {
                 Hypr.dispatch(`togglespecialworkspace ${specialWs.slice(8)}`);
             else if (angleDelta.y < 0 || (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? mon.activeWorkspace?.id : Hypr.activeWsId) > 1)
                 Hypr.dispatch(`workspace r${angleDelta.y > 0 ? "-" : "+"}1`);
+        } else if (ch?.id === "media") {
+            if (angleDelta.y > 0)
+                Players.selectPrevious();
+            else if (angleDelta.y < 0)
+                Players.selectNext();
         } else if (y < screen.height / 2 && Config.bar.scrollActions.volume) {
             // Volume scroll on top half
             if (angleDelta.y > 0)
@@ -131,6 +136,13 @@ ColumnLayout {
                         screen: root.screen
                         fullscreen: root.fullscreen
                     }
+                }
+            }
+            DelegateChoice {
+                roleValue: "media"
+                delegate: WrappedLoader {
+                    visible: !root.fullscreen
+                    sourceComponent: Media {}
                 }
             }
             DelegateChoice {
