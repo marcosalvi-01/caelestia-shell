@@ -47,11 +47,11 @@ Item {
     SearchBar {
         id: search
 
-        objectName: "launcherSearch"
-
         function isCalculatorQuery(text: string): bool {
             return text.startsWith("=") || text.startsWith(`${GlobalConfig.launcher.actionPrefix}calc `);
         }
+
+        objectName: "launcherSearch"
 
         anchors.left: parent.left
         anchors.right: parent.right
