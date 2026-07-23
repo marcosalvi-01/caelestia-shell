@@ -13,12 +13,52 @@ import qs.modules.launcher.services
 StyledListView {
     id: root
 
-    required property StyledTextField search
-    required property DrawerVisibilities visibilities
+    required property SearchBar search
+    required property ScreenState screenState
+
+    property string displayText
+
+    readonly property string requestedState: stateForText(search.text)
+    readonly property string displayState: stateForText(displayText)
+
+    function syncDisplayText(): void {
+        if (screenState.launcher && requestedState === displayState)
+            displayText = search.text;
+    }
+
+    function stateForText(text: string): string {
+        if (text.startsWith("="))
+            return "calc";
+
+        const prefix = GlobalConfig.launcher.actionPrefix;
+        if (text.startsWith(prefix)) {
+            for (const action of ["calc", "scheme", "variant"])
+                if (text.startsWith(`${prefix}${action} `))
+                    return action;
+
+            return "actions";
+        }
+
+        return "apps";
+    }
+
+    function resultsForText(text: string): var {
+        switch (stateForText(text)) {
+        case "actions":
+            return Actions.query(text);
+        case "calc":
+            return [0];
+        case "scheme":
+            return Schemes.query(text);
+        case "variant":
+            return M3Variants.query(text);
+        default:
+            return Apps.search(text);
+        }
+    }
 
     model: ScriptModel {
-        id: model
-
+        values: root.resultsForText(root.displayText)
         onValuesChanged: root.currentIndex = 0
     }
 
@@ -32,7 +72,7 @@ StyledListView {
 
     highlightFollowsCurrentItem: false
     highlight: StyledRect {
-        radius: Tokens.rounding.normal
+        radius: Tokens.rounding.large
         color: Colours.palette.m3onSurface
         opacity: 0.08
 
@@ -41,40 +81,24 @@ StyledListView {
         implicitHeight: root.currentItem?.implicitHeight ?? 0
 
         Behavior on y {
-            Anim {
-                type: Anim.DefaultSpatial
-            }
+            Anim {}
         }
     }
 
-    state: {
-        const text = search.text;
-        const prefix = GlobalConfig.launcher.actionPrefix;
-        if (text.startsWith("="))
-            return "calc";
-
-        if (text.startsWith(prefix)) {
-            for (const action of ["calc", "scheme", "variant"])
-                if (text.startsWith(`${prefix}${action} `))
-                    return action;
-
-            return "actions";
-        }
-
-        return "apps";
-    }
+    state: screenState.launcher ? requestedState : displayState
 
     onStateChanged: {
         if (state === "scheme" || state === "variant")
             Schemes.reload();
     }
 
+    Component.onCompleted: displayText = search.text
+
     states: [
         State {
             name: "apps"
 
             PropertyChanges {
-                model.values: Apps.search(search.text)
                 root.delegate: appItem
             }
         },
@@ -82,7 +106,6 @@ StyledListView {
             name: "actions"
 
             PropertyChanges {
-                model.values: Actions.query(search.text)
                 root.delegate: actionItem
             }
         },
@@ -90,7 +113,6 @@ StyledListView {
             name: "calc"
 
             PropertyChanges {
-                model.values: [0]
                 root.delegate: calcItem
             }
         },
@@ -98,7 +120,6 @@ StyledListView {
             name: "scheme"
 
             PropertyChanges {
-                model.values: Schemes.query(search.text)
                 root.delegate: schemeItem
             }
         },
@@ -106,7 +127,6 @@ StyledListView {
             name: "variant"
 
             PropertyChanges {
-                model.values: M3Variants.query(search.text)
                 root.delegate: variantItem
             }
         }
@@ -133,8 +153,16 @@ StyledListView {
                 }
             }
             PropertyAction {
-                targets: [model, root]
-                properties: "values,delegate"
+                target: root
+                property: "delegate"
+                value: null
+            }
+            ScriptAction {
+                script: root.displayText = root.search.text
+            }
+            PropertyAction {
+                target: root
+                property: "delegate"
             }
             ParallelAnimation {
                 Anim {
@@ -170,7 +198,8 @@ StyledListView {
         enabled: !root.state
 
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             from: 0
             to: 1
         }
@@ -180,7 +209,8 @@ StyledListView {
         enabled: !root.state
 
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             from: 1
             to: 0
         }
@@ -191,7 +221,8 @@ StyledListView {
             property: "y"
         }
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             to: 1
         }
     }
@@ -202,7 +233,8 @@ StyledListView {
             type: Anim.StandardSmall
         }
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             to: 1
         }
     }
@@ -212,7 +244,8 @@ StyledListView {
             property: "y"
         }
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             to: 1
         }
     }
@@ -221,7 +254,7 @@ StyledListView {
         id: appItem
 
         AppItem {
-            visibilities: root.visibilities
+            screenState: root.screenState
         }
     }
 
@@ -255,5 +288,21 @@ StyledListView {
         VariantItem {
             list: root
         }
+    }
+
+    Connections {
+        function onTextChanged() {
+            root.syncDisplayText();
+        }
+
+        target: root.search
+    }
+
+    Connections {
+        function onLauncherChanged() {
+            root.syncDisplayText();
+        }
+
+        target: root.screenState
     }
 }

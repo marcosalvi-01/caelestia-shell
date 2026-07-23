@@ -18,7 +18,7 @@ ColumnLayout {
 
     readonly property bool isWorkspace: true // Flag for finding workspace children
     // Unanimated prop for others to use as reference
-    readonly property int size: implicitHeight + (hasWindows ? Tokens.padding.small : 0)
+    readonly property int size: implicitHeight + (hasWindows ? Tokens.padding.extraSmall : 0)
 
     readonly property int ws: groupOffset + index + 1
     readonly property bool isOccupied: occupied[ws] ?? false
@@ -57,6 +57,7 @@ ColumnLayout {
         text: root.indicatorText
         color: Config.bar.workspaces.occupiedBg || root.isOccupied || root.activeWsId === root.ws ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2)
         verticalAlignment: Qt.AlignVCenter
+        font.family: Tokens.font.workspaces
     }
 
     Item {

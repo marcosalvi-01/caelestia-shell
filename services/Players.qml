@@ -18,6 +18,8 @@ Singleton {
     property alias manualActive: props.manualActive
     property bool controllerAvailable
     property string controllerPlayerName: ""
+    // Dedup key for progressive metadata (e.g. mpv-mpris/yt-dlp player fills title then artist later).
+    property string lastNowPlayingKey: ""
 
     function normalizePlayerName(name: string): string {
         return (name ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -33,12 +35,7 @@ Singleton {
 
         const controllerName = normalizePlayerName(controllerPlayerName);
         return usefulPlayers.find(player => {
-            const candidates = [
-                player.desktopEntry,
-                player.dbusName,
-                player.identity,
-                getIdentity(player)
-            ];
+            const candidates = [player.desktopEntry, player.dbusName, player.identity, getIdentity(player)];
             return candidates.some(candidate => normalizePlayerName(candidate).includes(controllerName));
         }) ?? null;
     }
@@ -52,14 +49,12 @@ Singleton {
         if (isUseful(manual))
             return manual;
 
-        return usefulPlayers.find(player => player.playbackState === MprisPlaybackState.Playing)
-            ?? usefulPlayers.find(player => player.playbackState === MprisPlaybackState.Paused)
-            ?? list.find(player => getIdentity(player) === GlobalConfig.services.defaultPlayer)
-            ?? list[0]
-            ?? null;
+        return usefulPlayers.find(player => player.playbackState === MprisPlaybackState.Playing) ?? usefulPlayers.find(player => player.playbackState === MprisPlaybackState.Paused) ?? list.find(player => getIdentity(player) === GlobalConfig.services.defaultPlayer) ?? list[0] ?? null;
     }
 
     function getIdentity(player: MprisPlayer): string {
+        if (!player)
+            return "";
         const alias = GlobalConfig.services.playerAliases.find(a => a.from === player.identity);
         return alias?.to ?? player.identity;
     }
@@ -68,14 +63,7 @@ Singleton {
         if (!player)
             return null;
 
-        const exactCandidates = [
-            player.desktopEntry,
-            `${player.desktopEntry}.desktop`,
-            player.identity,
-            getIdentity(player),
-            controllerPlayerName,
-            `${controllerPlayerName}.desktop`
-        ].filter(Boolean);
+        const exactCandidates = [player.desktopEntry, `${player.desktopEntry}.desktop`, player.identity, getIdentity(player), controllerPlayerName, `${controllerPlayerName}.desktop`].filter(Boolean);
 
         for (const candidate of exactCandidates) {
             const entry = DesktopEntries.applications.values.find(app => normalizePlayerName(app.id) === normalizePlayerName(candidate) || normalizePlayerName(app.name) === normalizePlayerName(candidate));
@@ -83,12 +71,7 @@ Singleton {
                 return entry;
         }
 
-        const heuristicCandidates = [
-            player.desktopEntry,
-            player.identity,
-            getIdentity(player),
-            controllerPlayerName
-        ].filter(Boolean);
+        const heuristicCandidates = [player.desktopEntry, player.identity, getIdentity(player), controllerPlayerName].filter(Boolean);
 
         for (const candidate of heuristicCandidates) {
             const entry = DesktopEntries.heuristicLookup(candidate);
@@ -218,14 +201,43 @@ Singleton {
         selectRelativePlayer(-1);
     }
 
+    // Quickshell only emits postTrackChanged when trackid/url/title change, so late
+    // artist updates (common with mpv-mpris + yt-dlp player) never retrigger it. Watch
+    // title/artist too and toast once both are usable.
+    function maybeToastNowPlaying(): void {
+        if (!GlobalConfig.utilities.toasts.nowPlaying)
+            return;
+
+        const player = root.active;
+        if (!player)
+            return;
+
+        const title = player.trackTitle ?? "";
+        const artist = player.trackArtist ?? "";
+        if (!title || !artist)
+            return;
+
+        const key = `${getIdentity(player)}\0${player.uniqueId}\0${title}\0${artist}`;
+        if (key === lastNowPlayingKey)
+            return;
+
+        lastNowPlayingKey = key;
+        Toaster.toast(qsTr("Now Playing"), qsTr("%1 - %2").arg(artist).arg(title), "music_note");
+    }
+
+    onActiveChanged: lastNowPlayingKey = ""
+
     Connections {
-        function onPostTrackChanged() {
-            if (!GlobalConfig.utilities.toasts.nowPlaying) {
-                return;
-            }
-            if (root.active.trackArtist != "" && root.active.trackTitle != "") {
-                Toaster.toast(qsTr("Now Playing"), qsTr("%1 - %2").arg(root.active.trackArtist).arg(root.active.trackTitle), "music_note");
-            }
+        function onPostTrackChanged(): void {
+            root.maybeToastNowPlaying();
+        }
+
+        function onTrackTitleChanged(): void {
+            root.maybeToastNowPlaying();
+        }
+
+        function onTrackArtistChanged(): void {
+            root.maybeToastNowPlaying();
         }
 
         target: root.active
