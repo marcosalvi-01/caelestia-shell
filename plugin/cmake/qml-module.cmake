@@ -48,5 +48,5 @@ function(qml_module arg_TARGET)
 
     # Add backing target dir to plugin rpath so it can find its backing target
     file(RELATIVE_PATH plugin_to_lib "/${module_target_path}" "/${top_level}/lib")
-    set_property(TARGET ${module_plugin_target} APPEND PROPERTY INSTALL_RPATH "$ORIGIN/${plugin_to_lib}")
+    set_property(TARGET ${module_plugin_target} PROPERTY INSTALL_RPATH "$ORIGIN/${plugin_to_lib};$ORIGIN")
 endfunction()
