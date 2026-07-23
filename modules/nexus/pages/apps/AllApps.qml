@@ -55,30 +55,34 @@ PageBase {
                     anchors.rightMargin: Tokens.padding.largeIncreased
                     spacing: Tokens.spacing.medium
 
-                    Loader {
-                        asynchronous: true
+                    Item {
                         implicitWidth: Math.round(Tokens.font.icon.large.pointSize * 1.8)
                         implicitHeight: implicitWidth
-                        sourceComponent: appItem.iconData.materialIcon ? materialIcon : appIcon
 
-                        Component {
-                            id: appIcon
+                        Loader {
+                            anchors.fill: parent
+                            asynchronous: true
+                            sourceComponent: appItem.iconData.materialIcon ? materialIcon : appIcon
 
-                            IconImage {
-                                anchors.fill: parent
-                                asynchronous: true
-                                source: appItem.iconData.source
+                            Component {
+                                id: appIcon
+
+                                IconImage {
+                                    anchors.fill: parent
+                                    asynchronous: true
+                                    source: appItem.iconData.source
+                                }
                             }
-                        }
 
-                        Component {
-                            id: materialIcon
+                            Component {
+                                id: materialIcon
 
-                            MaterialIcon {
-                                anchors.centerIn: parent
-                                text: appItem.iconData.materialIcon
-                                color: Colours.palette.m3onSurfaceVariant
-                                fontStyle: Tokens.font.icon.large
+                                MaterialIcon {
+                                    anchors.centerIn: parent
+                                    text: appItem.iconData.materialIcon
+                                    color: Colours.palette.m3onSurfaceVariant
+                                    fontStyle: Tokens.font.icon.large
+                                }
                             }
                         }
                     }

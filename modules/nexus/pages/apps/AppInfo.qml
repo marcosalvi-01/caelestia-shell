@@ -46,30 +46,34 @@ PageBase {
             Layout.bottomMargin: Tokens.spacing.large
             spacing: Tokens.spacing.large
 
-            Loader {
-                asynchronous: true
+            Item {
                 implicitWidth: Math.round(Tokens.font.icon.large.pointSize * 3)
                 implicitHeight: implicitWidth
-                sourceComponent: root.iconData.materialIcon ? materialIcon : appIcon
 
-                Component {
-                    id: appIcon
+                Loader {
+                    anchors.fill: parent
+                    asynchronous: true
+                    sourceComponent: root.iconData.materialIcon ? materialIcon : appIcon
 
-                    IconImage {
-                        anchors.fill: parent
-                        asynchronous: true
-                        source: root.iconData.source
+                    Component {
+                        id: appIcon
+
+                        IconImage {
+                            anchors.fill: parent
+                            asynchronous: true
+                            source: root.iconData.source
+                        }
                     }
-                }
 
-                Component {
-                    id: materialIcon
+                    Component {
+                        id: materialIcon
 
-                    MaterialIcon {
-                        anchors.centerIn: parent
-                        text: root.iconData.materialIcon
-                        color: Colours.palette.m3onSurfaceVariant
-                        fontStyle: Tokens.font.icon.large
+                        MaterialIcon {
+                            anchors.centerIn: parent
+                            text: root.iconData.materialIcon
+                            color: Colours.palette.m3onSurfaceVariant
+                            fontStyle: Tokens.font.icon.large
+                        }
                     }
                 }
             }
