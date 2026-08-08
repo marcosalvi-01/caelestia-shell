@@ -66,7 +66,7 @@ Scope {
         description: "Toggle launcher"
         onPressed: root.launcherInterrupted = false
         onReleased: {
-            if (!root.launcherInterrupted && !root.hasFullscreen) {
+            if (!root.launcherInterrupted) {
                 const screenState = ShellState.forActive();
                 screenState.launcher = !screenState.launcher;
             }
