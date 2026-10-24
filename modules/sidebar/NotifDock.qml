@@ -74,7 +74,7 @@ Item {
         }
     }
 
-    StyledClippingRect {
+    ClipRect {
         id: clipRect
 
         anchors.left: parent.left

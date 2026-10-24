@@ -19,7 +19,11 @@ Q_LOGGING_CATEGORY(lcCUtils, "caelestia.cutils", QtInfoMsg)
 
 } // namespace
 
-namespace caelestia {
+namespace caelestia::shell {
+
+void CUtils::dependency(const QVariant& value) {
+    Q_UNUSED(value);
+}
 
 void CUtils::saveItem(QQuickItem* target, const QUrl& path, const QJSValue& onSaved, const QJSValue& onFailed) {
     this->saveItem(target, path, QRect(), onSaved, onFailed);
@@ -56,14 +60,12 @@ void CUtils::saveItem(
     }
 
     QObject::connect(
-        grabResult.data(), &QQuickItemGrabResult::ready, this, [grabResult, scaledRect, path, onSaved, onFailed, this] {
-            QtConcurrent::run([grabResult, scaledRect, file = path.toLocalFile()] {
-                auto image = grabResult->image();
-                if (scaledRect.isValid())
-                    image = image.copy(scaledRect);
-
+        grabResult.data(), &QQuickItemGrabResult::ready, this,
+        [grabResult, scaledRect, path, onSaved, onFailed, this] {
+            QtConcurrent::run([image = grabResult->image(), scaledRect, file = path.toLocalFile()] {
+                const auto img = scaledRect.isValid() ? image.copy(scaledRect) : image;
                 const auto parent = QFileInfo(file).absolutePath();
-                return QDir().mkpath(parent) && image.save(file);
+                return QDir().mkpath(parent) && img.save(file);
             }).then(this, [path, onSaved, onFailed](bool ok) {
                 const auto* cb = ok ? &onSaved : &onFailed;
                 if (!ok)
@@ -72,7 +74,8 @@ void CUtils::saveItem(
                 if (cb->isCallable())
                     cb->call({ path.toLocalFile() });
             });
-        });
+        },
+        Qt::SingleShotConnection);
 }
 
 bool CUtils::copyFile(const QUrl& source, const QUrl& target, bool overwrite) {
@@ -85,11 +88,9 @@ bool CUtils::copyFile(const QUrl& source, const QUrl& target, bool overwrite) {
         return false;
     }
 
-    if (overwrite && QFile::exists(target.toLocalFile())) {
-        if (!QFile::remove(target.toLocalFile())) {
-            qCWarning(lcCUtils) << "copyFile: overwrite was specified but failed to remove" << target.toLocalFile();
-            return false;
-        }
+    if (overwrite && QFile::exists(target.toLocalFile()) && !QFile::remove(target.toLocalFile())) {
+        qCWarning(lcCUtils) << "copyFile: overwrite was specified but failed to remove" << target.toLocalFile();
+        return false;
     }
 
     return QFile::copy(source.toLocalFile(), target.toLocalFile());
@@ -244,4 +245,4 @@ QString CUtils::qtVersion() {
     return QStringLiteral(QT_VERSION_STR);
 }
 
-} // namespace caelestia
+} // namespace caelestia::shell
